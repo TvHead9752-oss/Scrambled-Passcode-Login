@@ -1,8 +1,12 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# Read the file
 def read_file(file_path):
     with open(file_path, 'r') as file:
         return file.read()
 
-# Extract the username and password
+# Extract username and password
 def extract_credentials(content):
     username_start = content.find('u')
     username_end = content.find('r', username_start) + 1
@@ -16,43 +20,55 @@ def extract_credentials(content):
 
     return username, password
 
+# Write credentials
 def write_creds(username, password):
     with open("revealed_passcode.txt", "w") as file:
         file.write(f"Username: {username}\nPassword: {password}\n")
 
-# Main login
+# Log the result
+def log_event(event, user, pwd, time, fails=None):
+    with open("logfile.log", "a") as log_file:
+        if event:
+            log_file.write(f"{event} | Username: {user} | Password: {pwd} | Timestamp: {time}\n")
+        if fails is not None:  # Log the failure count ONLY at the end (please work)
+            log_file.write(f"TOTAL FAILURES: {fails}\n")
+
+# Main login process
 def login():
+    
     file_path = "scrambled_passcode.txt"
     content = read_file(file_path)
     print("File content read successfully:")
     print(content)
-    
+
     username, password = extract_credentials(content)
     print(f"Extracted username: {username}")
     print(f"Extracted password: {password}")
 
-
-    # If credentials are valid...
+    # extracted credentials
     write_creds(username, password)
 
-    # login
-    while True:
-        input_username = input("Username: ")
-        input_password = input("Password: ")
+    # failure tracker
+    fails = 0
 
-        # Check if username and password match the extracted one
-        if input_username == username and input_password == password:
-            
-            # Write success/failure log
-            with open("logfile.log", "a") as log_file:  # append success log
-                log_file.write("SUCCESS | Username: " + input_username + " | Password: " + input_password + "\n")
+    while True:
+        input_user = input("Username: ")
+        input_pwd = input("Password: ")
+
+        # current time
+        cur_time = datetime.now(ZoneInfo("EST")).strftime("%Y-%m-%d %H:%M:%S %Z")
+
+        if input_user == username and input_pwd == password:
             print("Login successful!")
+            log_event("SUCCESS", input_user, input_pwd, cur_time)
             break
         else:
             print("Invalid username or password. Please try again.")
-            
-            with open("logfile.log", "a") as log_file:  # append failure log
-                log_file.write("FAILURE | Username: " + input_username + " | Password: " + input_password + "\n")
+            fails += 1
+            log_event("FAILURE", input_user, input_pwd, cur_time)
 
-# Run the login
+    # total failures log
+    log_event("", "", "", "", fails)
+
+# login process
 login()
